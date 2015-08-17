@@ -1,3 +1,9 @@
+# Eclipse
+.cproject
+.project
+Debug
+Release
+
 # Compiled Object files
 *.slo
 *.lo
