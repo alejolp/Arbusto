@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <map>
 #include <fstream>
 #include <limits>
 #include <memory>
@@ -22,7 +23,7 @@ EBNF for Grammar/Grammar
 term = ( NT | T ) [ '+' | '*' ]
 option = '[' rhs ']'
 repetition = '(' rhs ')' [ '+' | '*' ]
-sequence = ( term | option | repetition ) *
+sequence = ( term | option | repetition ) +
 rhs = sequence ( '|' sequence ) *
 rule = NT ':' rhs
 
@@ -56,14 +57,14 @@ public:
 
 class grammar_node_optional : public grammar_node {
 public:
-	grammar_node_optional(grammar_node_ptr c) : grammar_node(GNODE_OPTIONAL), child(c) {}
+	grammar_node_optional(grammar_node_ptr &&c) : grammar_node(GNODE_OPTIONAL), child(std::move(c)) {}
 
 	grammar_node_ptr child;
 };
 
 class grammar_node_repetition : public grammar_node {
 public:
-	grammar_node_repetition(grammar_node_ptr c, bool s) : grammar_node(GNODE_REPETITION), child(c), star(s) {}
+	grammar_node_repetition(grammar_node_ptr &&c, bool s) : grammar_node(GNODE_REPETITION), child(std::move(c)), star(s) {}
 
 	grammar_node_ptr child;
 	bool star;
@@ -85,7 +86,7 @@ public:
 
 class grammar_node_rule : public grammar_node {
 public:
-	grammar_node_rule() : grammar_node(GNODE_RULE) {}
+	grammar_node_rule(const std::string& s, grammar_node_ptr r) : grammar_node(GNODE_RULE), rule_name(s), rhs(std::move(r)) {}
 
 	std::string rule_name;
 	grammar_node_ptr rhs;
@@ -98,15 +99,16 @@ public:
 	{}
 
 	bool eof() {
-		return end_ >= begin_;
+		return begin_ >= end_;
 	}
 
 	const std::string& peek() {
-		return eof() ? "" : tokens_.at(begin_);
+		static std::string empty;
+		return eof() ? empty : tokens_.at(begin_);
 	}
 
 	const std::string& get() {
-		auto ret = peek();
+		const std::string& ret = peek();
 		begin_++;
 		return ret;
 	}
@@ -130,6 +132,7 @@ public:
 	void parse_grammar_file(const std::string& file_name);
 
 	std::vector<std::string> tokens;
+	std::map<std::string, grammar_node_ptr> rules;
 
 private:
 	void tokenize_grammar_file(const std::string& file_name);
@@ -145,6 +148,14 @@ private:
 
 	inline bool valid_name_char(int c) {
 		return std::isalnum(c) || c == '_';
+	}
+
+	inline bool is_token_NT(const std::string& s) {
+		return s.size() && valid_name_char(s[0]);
+	}
+
+	inline bool is_token_T(const std::string& s) {
+		return s.size() && s[0] == '\'';
 	}
 };
 
@@ -250,10 +261,36 @@ void grammar::parse_grammar_file(const std::string& file_name) {
 }
 
 grammar_node_ptr grammar::parse_term(tokens_iter& it) {
+	/* term = ( NT | T ) [ '+' | '*' ] */
 
+	auto p = it.pos();
+
+	if (it.eof()) {
+		it.reset(p);
+		return grammar_node_ptr();
+	}
+
+	auto next = it.peek();
+
+	if (is_token_NT(next) || is_token_T(next)) {
+		it.get();
+		grammar_node_ptr node = grammar_node_ptr(new grammar_node_string(next));
+
+		auto next2 = it.peek();
+		if (next2 == "*" || next2 == "+") {
+			it.get();
+			return grammar_node_ptr(new grammar_node_repetition(std::move(node), (next2 == "*")));
+		}
+
+		return node;
+	}
+
+	it.reset(p);
+	return grammar_node_ptr();
 }
 
 grammar_node_ptr grammar::parse_option(tokens_iter& it) {
+	/* option = '[' rhs ']' */
 	auto p = it.pos();
 
 	if (it.peek() != "[") {
@@ -272,28 +309,142 @@ grammar_node_ptr grammar::parse_option(tokens_iter& it) {
 
 	std::string rbrace = it.get();
 
-	grammar_node_ptr ret = grammar_node::option();
-	ret->childs.push_back(lbrace);
-	ret->childs.push_back(rhs);
-	ret->childs.push_back(rbrace);
-
-	return ret;
+	return grammar_node_ptr(new grammar_node_optional(std::move(rhs)));
 }
 
 grammar_node_ptr grammar::parse_repetition(tokens_iter& it) {
+	/* repetition = '(' rhs ')' [ '+' | '*' ] */
+	auto p = it.pos();
 
+	if (it.peek() != "(") {
+		it.reset(p);
+		return grammar_node_ptr();
+	}
+
+	std::string lpar = it.get();
+
+	auto rhs = parse_rhs(it);
+
+	if (it.peek() != ")") {
+		it.reset(p);
+		return grammar_node_ptr();
+	}
+
+	std::string rpar = it.get();
+	std::string next = it.peek();
+
+	if (next == "+" || next == "*") {
+		it.get();
+		return grammar_node_ptr(new grammar_node_repetition(std::move(rhs), (next == "*")));
+	}
+
+	return rhs;
 }
 
 grammar_node_ptr grammar::parse_sequence(tokens_iter& it) {
+	/* sequence = ( term | option | repetition ) + */
 
+	std::vector<grammar_node_ptr> childs;
+
+	for (;;) {
+		grammar_node_ptr next;
+
+		next = parse_term(it);
+		if (next) {
+			childs.push_back(std::move(next));
+			continue;
+		}
+
+		next = parse_option(it);
+		if (next) {
+			childs.push_back(std::move(next));
+			continue;
+		}
+
+		next = parse_repetition(it);
+		if (next) {
+			childs.push_back(std::move(next));
+			continue;
+		}
+
+		break;
+	}
+
+	if (childs.size()) {
+		auto node = new grammar_node_sequence();
+		node->childs = std::move(childs);
+		return grammar_node_ptr(node);
+	}
+
+	return grammar_node_ptr();
 }
 
 grammar_node_ptr grammar::parse_rhs(tokens_iter& it) {
+	/* rhs = sequence ( '|' sequence ) */
 
+	auto p = it.pos();
+
+	auto node = new grammar_node_rhs();
+	grammar_node_ptr next;
+
+	next = parse_sequence(it);
+	if (!next) {
+		it.reset(p);
+		return grammar_node_ptr();
+	}
+
+	node->choices.push_back(std::move(next));
+
+	for (;;) {
+		if (it.peek() != "|") {
+			break;
+		}
+
+		it.get();
+
+		next = parse_sequence(it);
+		if (!next) {
+			/* FIXME: If this happens: broken text! RULE: A || B */
+			it.reset(p);
+			break;
+		}
+
+		node->choices.push_back(std::move(next));
+		p = it.pos();
+	}
+
+	return grammar_node_ptr(node);
 }
 
 grammar_node_ptr grammar::parse_rule(tokens_iter& it) {
+	/* rule = NT ':' rhs */
 
+	auto p = it.pos();
+
+	auto left = it.peek();
+
+	if (!is_token_NT(left)) {
+		it.reset(p);
+		return grammar_node_ptr();
+	}
+
+	it.get();
+
+	if (it.peek() != ":") {
+		it.reset(p);
+		return grammar_node_ptr();
+	}
+
+	it.get();
+
+	auto rhs = parse_rhs(it);
+
+	if (rhs) {
+		return grammar_node_ptr(new grammar_node_rule(left, std::move(rhs)));
+	}
+
+	it.reset(p);
+	return grammar_node_ptr();
 }
 
 void grammar::parse_production(size_t p, size_t i) {
@@ -306,11 +457,21 @@ void grammar::parse_production(size_t p, size_t i) {
 	std::cout << std::endl;
 #endif
 	tokens_iter it(p, i, tokens);
+
+	grammar_node_ptr node = parse_rule(it);
+
+	if (node) {
+		grammar_node_rule* rule = static_cast<grammar_node_rule*>(node.get());
+		rules[rule->rule_name] = std::move(node);
+	} else {
+		std::cout << "ERROR for " << p << " " << i << std::endl;
+	}
 }
 
 int main(int argc, char **argv) {
 	grammar G;
-	G.parse_grammar_file(argv[1]);
-	std::cout << G.tokens.size() << std::endl;
+	G.parse_grammar_file((argc > 1) ? argv[1] : "Grammar");
+	std::cout << "TOKENS COUNT=" << G.tokens.size() << std::endl;
+	std::cout << "RULES COUNT=" << G.rules.size() << std::endl;
 	return 0;
 }
