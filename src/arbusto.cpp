@@ -44,6 +44,9 @@ typedef std::unique_ptr<grammar_node> grammar_node_ptr;
 class grammar_node {
 public:
 	explicit grammar_node(grammar_node_type t) : type(t) {}
+	virtual ~grammar_node() {}
+
+	virtual void print() = 0;
 
 	grammar_node_type type;
 };
@@ -52,6 +55,10 @@ class grammar_node_string : public grammar_node {
 public:
 	grammar_node_string(const std::string &v) : grammar_node(GNODE_STRING), value(v) {}
 
+	virtual void print() {
+		std::cout << "string(" << value << ")";
+	}
+
 	std::string value;
 };
 
@@ -59,12 +66,24 @@ class grammar_node_optional : public grammar_node {
 public:
 	grammar_node_optional(grammar_node_ptr &&c) : grammar_node(GNODE_OPTIONAL), child(std::move(c)) {}
 
+	virtual void print() {
+		std::cout << "optional(";
+		if (child) child->print();
+		std::cout << ")";
+	}
+
 	grammar_node_ptr child;
 };
 
 class grammar_node_repetition : public grammar_node {
 public:
 	grammar_node_repetition(grammar_node_ptr &&c, bool s) : grammar_node(GNODE_REPETITION), child(std::move(c)), star(s) {}
+
+	virtual void print() {
+		std::cout << "repetition(" << (star ? "'*'" : "'+'") << ", ";
+		if (child) child->print();
+		std::cout << ")";
+	}
 
 	grammar_node_ptr child;
 	bool star;
@@ -74,6 +93,15 @@ class grammar_node_sequence : public grammar_node {
 public:
 	grammar_node_sequence() : grammar_node(GNODE_SEQUENCE) {}
 
+	virtual void print() {
+		std::cout << "sequence(";
+		for (auto& e : childs) {
+			if (e) e->print();
+			std::cout << ", ";
+		}
+		std::cout << ")";
+	}
+
 	std::vector<grammar_node_ptr> childs;
 };
 
@@ -81,12 +109,27 @@ class grammar_node_rhs : public grammar_node {
 public:
 	grammar_node_rhs() : grammar_node(GNODE_RHS) {}
 
+	virtual void print() {
+		std::cout << "rhs(";
+		for (auto& e : choices) {
+			if (e) e->print();
+			std::cout << ", ";
+		}
+		std::cout << ")";
+	}
+
 	std::vector<grammar_node_ptr> choices;
 };
 
 class grammar_node_rule : public grammar_node {
 public:
 	grammar_node_rule(const std::string& s, grammar_node_ptr r) : grammar_node(GNODE_RULE), rule_name(s), rhs(std::move(r)) {}
+
+	virtual void print() {
+		std::cout << "rule(" << rule_name << ", ";
+		if (rhs) rhs->print();
+		std::cout << ")";
+	}
 
 	std::string rule_name;
 	grammar_node_ptr rhs;
@@ -461,6 +504,8 @@ void grammar::parse_production(size_t p, size_t i) {
 	grammar_node_ptr node = parse_rule(it);
 
 	if (node) {
+		node->print();
+		std::cout << std::endl;
 		grammar_node_rule* rule = static_cast<grammar_node_rule*>(node.get());
 		rules[rule->rule_name] = std::move(node);
 	} else {
