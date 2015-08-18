@@ -1,8 +1,7 @@
 /*
- * grammarparser.h
- *
- *  Created on: Aug 17, 2015
- *      Author: alejo
+ * Arbusto: A Python Compiler.
+ * Alejandro Santos, @alejolp.
+ * Licence: MIT
  */
 
 #ifndef GRAMMARPARSER_H_

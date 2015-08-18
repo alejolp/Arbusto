@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "grammarparser.h"
+#include "pythontokenizer.h"
 
 
 int main(int argc, char **argv) {
@@ -19,6 +20,10 @@ int main(int argc, char **argv) {
 		std::cout << "TOKENS COUNT=" << G.tokens.size() << std::endl;
 		std::cout << "RULES COUNT=" << G.rules.size() << std::endl;
 	}
+
+	arbusto::python_tokenizer T;
+
+	T.tokenize_file("../../pppp/main.py");
 
 	return 0;
 }

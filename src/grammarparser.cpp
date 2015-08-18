@@ -1,8 +1,7 @@
 /*
- * grammarparser.cpp
- *
- *  Created on: Aug 17, 2015
- *      Author: alejo
+ * Arbusto: A Python Compiler.
+ * Alejandro Santos, @alejolp.
+ * Licence: MIT
  */
 
 #include <iostream>
