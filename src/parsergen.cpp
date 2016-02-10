@@ -9,7 +9,7 @@
 #include <set>
 #include <stdexcept>
 
-#include "grammargen.h"
+#include "parsergen.h"
 
 namespace arbusto {
 

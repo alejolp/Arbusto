@@ -7,7 +7,7 @@
 #include <iostream>
 
 #include "grammarparser.h"
-#include "grammargen.h"
+#include "parsergen.h"
 #include "tokenizer.h"
 
 
