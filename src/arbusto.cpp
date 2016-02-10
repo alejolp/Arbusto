@@ -7,6 +7,7 @@
 #include <iostream>
 
 #include "grammarparser.h"
+#include "grammargen.h"
 #include "tokenizer.h"
 
 
@@ -24,6 +25,13 @@ int main(int argc, char **argv) {
 		}
 
 		return 0;
+	} else if (argc >= 3 && std::string(argv[1]) == "gen_parser") {
+		arbusto::grammar_parser G;
+		G.debug = debug;
+		G.parse_grammar_file(argv[2]);
+
+		generate_parser(G);
+
 	} else if (argc >= 3 && std::string(argv[1]) == "parse_file") {
 		arbusto::tokenizer T;
 		std::vector<arbusto::token> toks;
@@ -39,6 +47,7 @@ int main(int argc, char **argv) {
 	} else {
 		std::cerr << "Usage: " << std::endl;
 		std::cerr << " " << argv[0] << " parse_grammar grammar_file" << std::endl;
+		std::cerr << " " << argv[0] << " gen_parser grammar_file" << std::endl;
 		std::cerr << " " << argv[0] << " parse_file py_file" << std::endl;
 		return 1;
 	}
