@@ -177,7 +177,7 @@ private:
 	std::vector<std::string> &tokens_;
 };
 
-class grammar {
+class grammar_parser {
 public:
 	void parse_grammar_file(const std::string& file_name);
 

@@ -15,7 +15,7 @@ namespace arbusto {
 
 
 /* Tokenizer for the Grammar/Grammar Python file */
-void grammar::tokenize_grammar_file(const std::string& file_name) {
+void grammar_parser::tokenize_grammar_file(const std::string& file_name) {
 	std::ifstream ifile;
 
 	ifile.open(file_name);
@@ -97,7 +97,7 @@ void grammar::tokenize_grammar_file(const std::string& file_name) {
  * Implement a Recursive Descent Parser for the Grammar
  *
  * */
-void grammar::parse_grammar_file(const std::string& file_name) {
+void grammar_parser::parse_grammar_file(const std::string& file_name) {
 	tokenize_grammar_file(file_name);
 	size_t i, p = std::numeric_limits<size_t>::max();
 
@@ -115,7 +115,7 @@ void grammar::parse_grammar_file(const std::string& file_name) {
 	}
 }
 
-grammar_node_ptr grammar::parse_term(tokens_iter& it) {
+grammar_node_ptr grammar_parser::parse_term(tokens_iter& it) {
 	/* term = ( NT | T ) [ '+' | '*' ] */
 
 	auto p = it.pos();
@@ -144,7 +144,7 @@ grammar_node_ptr grammar::parse_term(tokens_iter& it) {
 	return grammar_node_ptr();
 }
 
-grammar_node_ptr grammar::parse_option(tokens_iter& it) {
+grammar_node_ptr grammar_parser::parse_option(tokens_iter& it) {
 	/* option = '[' rhs ']' */
 	auto p = it.pos();
 
@@ -167,7 +167,7 @@ grammar_node_ptr grammar::parse_option(tokens_iter& it) {
 	return grammar_node_ptr(new grammar_node_optional(std::move(rhs)));
 }
 
-grammar_node_ptr grammar::parse_repetition(tokens_iter& it) {
+grammar_node_ptr grammar_parser::parse_repetition(tokens_iter& it) {
 	/* repetition = '(' rhs ')' [ '+' | '*' ] */
 	auto p = it.pos();
 
@@ -196,7 +196,7 @@ grammar_node_ptr grammar::parse_repetition(tokens_iter& it) {
 	return rhs;
 }
 
-grammar_node_ptr grammar::parse_sequence(tokens_iter& it) {
+grammar_node_ptr grammar_parser::parse_sequence(tokens_iter& it) {
 	/* sequence = ( term | option | repetition ) + */
 
 	std::vector<grammar_node_ptr> childs;
@@ -236,7 +236,7 @@ grammar_node_ptr grammar::parse_sequence(tokens_iter& it) {
 	return grammar_node_ptr();
 }
 
-grammar_node_ptr grammar::parse_rhs(tokens_iter& it) {
+grammar_node_ptr grammar_parser::parse_rhs(tokens_iter& it) {
 	/* rhs = sequence ( '|' sequence ) */
 
 	auto p = it.pos();
@@ -279,7 +279,7 @@ grammar_node_ptr grammar::parse_rhs(tokens_iter& it) {
 	}
 }
 
-grammar_node_ptr grammar::parse_rule(tokens_iter& it) {
+grammar_node_ptr grammar_parser::parse_rule(tokens_iter& it) {
 	/* rule = NT ':' rhs */
 
 	auto p = it.pos();
@@ -310,7 +310,7 @@ grammar_node_ptr grammar::parse_rule(tokens_iter& it) {
 	return grammar_node_ptr();
 }
 
-void grammar::parse_production(size_t p, size_t i) {
+void grammar_parser::parse_production(size_t p, size_t i) {
 #if 0
 	std::cout << p << "; " << i << std::endl;
 	while (p < i) {

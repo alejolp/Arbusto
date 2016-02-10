@@ -309,7 +309,7 @@ void tokenizer::tokenize_string(const std::string& file_str, std::vector<token> 
 		{
 			line_new = false;
 			/* if we reach here means the next token is not whitespace, we have zero indent, and following token is a stmt */
-			while (0 > indent_stack.back()) {
+			while (0 < indent_stack.back()) {
 				toks.emplace_back(TOK_DEDENT, p, 0, line_num);
 				indent_stack.pop_back();
 			}
