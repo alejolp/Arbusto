@@ -1,7 +1,7 @@
 /*
  * Arbusto: A Python Compiler.
  * Alejandro Santos, @alejolp.
- * Licence: MIT
+ * Licence: BSD
  */
 
 #ifndef TOKENIZER_H_
