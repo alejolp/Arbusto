@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
 
 		generate_parser(G);
 
+		return 0;
 	} else if (argc >= 3 && std::string(argv[1]) == "parse_file") {
 		arbusto::tokenizer T;
 		std::vector<arbusto::token> toks;

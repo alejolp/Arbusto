@@ -210,6 +210,19 @@ private:
 	}
 };
 
+class grammar_node_visitor {
+public:
+	virtual ~grammar_node_visitor() {};
+
+	virtual void visit(grammar_node* node);
+	virtual void visit_string(grammar_node_string*);
+	virtual void visit_optional(grammar_node_optional*);
+	virtual void visit_repetition(grammar_node_repetition*);
+	virtual void visit_sequence(grammar_node_sequence*);
+	virtual void visit_rhs(grammar_node_rhs*);
+	virtual void visit_rule(grammar_node_rule*);
+};
+
 
 } /* namespace arbusto */
 

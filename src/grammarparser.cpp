@@ -337,5 +337,82 @@ void grammar_parser::parse_production(size_t p, size_t i) {
 	}
 }
 
+void grammar_node_visitor::visit(grammar_node* node) {
+	switch (node->type) {
+	case GNODE_STRING: /* for leafs */
+		{
+			grammar_node_string* nodestr = static_cast<grammar_node_string*>(node);
+			visit_string(nodestr);
+		}
+		break;
+
+	case GNODE_OPTIONAL: /* for [ optional ] */
+		{
+			grammar_node_optional* nodeopt = static_cast<grammar_node_optional*>(node);
+			visit_optional(nodeopt);
+		}
+		break;
+		
+	case GNODE_REPETITION: /* for X* | X+ */
+		{
+			grammar_node_repetition* noderep = static_cast<grammar_node_repetition*>(node);
+			visit_repetition(noderep);
+		}
+		break;
+		
+	case GNODE_SEQUENCE: /* for a sequence A B C */
+		{
+			grammar_node_sequence* nodeseq = static_cast<grammar_node_sequence*>(node);
+			visit_sequence(nodeseq);
+		}
+		break;
+		
+	case GNODE_RHS: /* for alternatives A|B|C */
+		{
+			grammar_node_rhs* noderhs = static_cast<grammar_node_rhs*>(node);
+			visit_rhs(noderhs);
+		}
+		break;
+		
+	case GNODE_RULE: /* the main rule: NAME ':' RHS */
+		{
+			grammar_node_rule* noderul = static_cast<grammar_node_rule*>(node);
+			visit_rule(noderul);
+		}
+		break;
+
+	default:
+		throw std::runtime_error("unknown node type");
+	}
+}
+
+void grammar_node_visitor::visit_string(grammar_node_string* node) {
+	// No childs
+}
+
+void grammar_node_visitor::visit_optional(grammar_node_optional* node) {
+	visit(node->child.get());
+}
+
+void grammar_node_visitor::visit_repetition(grammar_node_repetition* node) {
+	visit(node->child.get());
+}
+
+void grammar_node_visitor::visit_sequence(grammar_node_sequence* node) {
+	for (size_t i = 0; i < node->childs.size(); ++i) {
+		visit(node->childs[i].get());
+	}
+}
+
+void grammar_node_visitor::visit_rhs(grammar_node_rhs* node) {
+	for (size_t i = 0; i < node->choices.size(); ++i) {
+		visit(node->choices[i].get());
+	}
+}
+
+void grammar_node_visitor::visit_rule(grammar_node_rule* node) {
+	visit(node->rhs.get());
+}
+
 
 } /* namespace arbusto */
