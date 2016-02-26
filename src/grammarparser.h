@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 #include <map>
 #include <memory>
 
@@ -50,7 +51,7 @@ public:
 	explicit grammar_node(grammar_node_type t) : type(t) {}
 	virtual ~grammar_node() {}
 
-	virtual void print() = 0;
+	virtual std::string repr() = 0;
 
 	grammar_node_type type;
 };
@@ -59,8 +60,10 @@ class grammar_node_string : public grammar_node {
 public:
 	grammar_node_string(const std::string &v) : grammar_node(GNODE_STRING), value(v) {}
 
-	virtual void print() {
-		std::cout << "string(" << value << ")";
+	virtual std::string repr() {
+		std::stringstream ss;
+		ss << "string(" << value << ")";
+		return ss.str();
 	}
 
 	std::string value;
@@ -70,10 +73,12 @@ class grammar_node_optional : public grammar_node {
 public:
 	grammar_node_optional(grammar_node_ptr &&c) : grammar_node(GNODE_OPTIONAL), child(std::move(c)) {}
 
-	virtual void print() {
-		std::cout << "optional(";
-		if (child) child->print();
-		std::cout << ")";
+	virtual std::string repr() {
+		std::stringstream ss;
+		ss << "optional(";
+		if (child) ss << child->repr();
+		ss << ")";
+		return ss.str();
 	}
 
 	grammar_node_ptr child;
@@ -83,10 +88,12 @@ class grammar_node_repetition : public grammar_node {
 public:
 	grammar_node_repetition(grammar_node_ptr &&c, bool s) : grammar_node(GNODE_REPETITION), child(std::move(c)), star(s) {}
 
-	virtual void print() {
-		std::cout << "repetition(" << (star ? "'*'" : "'+'") << ", ";
-		if (child) child->print();
-		std::cout << ")";
+	virtual std::string repr() {
+		std::stringstream ss;
+		ss << "repetition(" << (star ? "'*'" : "'+'") << ", ";
+		if (child) ss << child->repr();
+		ss << ")";
+		return ss.str();
 	}
 
 	grammar_node_ptr child;
@@ -97,13 +104,15 @@ class grammar_node_sequence : public grammar_node {
 public:
 	grammar_node_sequence() : grammar_node(GNODE_SEQUENCE) {}
 
-	virtual void print() {
-		std::cout << "sequence(";
+	virtual std::string repr() {
+		std::stringstream ss;
+		ss << "sequence(";
 		for (auto& e : childs) {
-			if (e) e->print();
-			std::cout << ", ";
+			if (e) ss << e->repr();
+			ss << ", ";
 		}
-		std::cout << ")";
+		ss << ")";
+		return ss.str();
 	}
 
 	std::vector<grammar_node_ptr> childs;
@@ -113,16 +122,18 @@ class grammar_node_rhs : public grammar_node {
 public:
 	grammar_node_rhs() : grammar_node(GNODE_RHS) {}
 
-	virtual void print() {
-		std::cout << "rhs(";
+	virtual std::string repr() {
+		std::stringstream ss;
+		ss << "rhs(";
 		int i=0;
 		for (auto& e : choices) {
 			if (e) {
-				if (i++) std::cout << " | ";
-				e->print();
+				if (i++) ss << " | ";
+				ss << e->repr();
 			}
 		}
-		std::cout << ")";
+		ss << ")";
+		return ss.str();
 	}
 
 	std::vector<grammar_node_ptr> choices;
@@ -132,10 +143,12 @@ class grammar_node_rule : public grammar_node {
 public:
 	grammar_node_rule(const std::string& s, grammar_node_ptr r) : grammar_node(GNODE_RULE), rule_name(s), rhs(std::move(r)) {}
 
-	virtual void print() {
-		std::cout << "rule(" << rule_name << ", ";
-		if (rhs) rhs->print();
-		std::cout << ")";
+	virtual std::string repr() {
+		std::stringstream ss;
+		ss << "rule(" << rule_name << ", ";
+		if (rhs) ss << rhs->repr();
+		ss << ")";
+		return ss.str();
 	}
 
 	std::string rule_name;
@@ -185,6 +198,18 @@ public:
 	std::vector<std::string> tokens;
 	std::map<std::string, grammar_node_ptr> rules;
 
+	inline bool valid_name_char(int c) {
+		return std::isalnum(c) || c == '_';
+	}
+
+	inline bool is_token_NT(const std::string& s) {
+		return s.size() && valid_name_char(s[0]);
+	}
+
+	inline bool is_token_T(const std::string& s) {
+		return s.size() && s[0] == '\'';
+	}
+
 private:
 	void tokenize_grammar_file(const std::string& file_name);
 
@@ -197,17 +222,6 @@ private:
 	grammar_node_ptr parse_rhs(tokens_iter& it);
 	grammar_node_ptr parse_rule(tokens_iter& it);
 
-	inline bool valid_name_char(int c) {
-		return std::isalnum(c) || c == '_';
-	}
-
-	inline bool is_token_NT(const std::string& s) {
-		return s.size() && valid_name_char(s[0]);
-	}
-
-	inline bool is_token_T(const std::string& s) {
-		return s.size() && s[0] == '\'';
-	}
 };
 
 class grammar_node_visitor {

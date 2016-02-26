@@ -325,7 +325,7 @@ void grammar_parser::parse_production(size_t p, size_t i) {
 
 	if (node) {
 		if (debug) {
-			node->print();
+			std::cout << node->repr();
 			std::cout << std::endl;
 		}
 		grammar_node_rule* rule = static_cast<grammar_node_rule*>(node.get());
